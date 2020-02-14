@@ -8,6 +8,7 @@ import sys
 import numpy as np
 import numpy.random as rn
 import tensorly as tl
+import sktensor as skt
 cimport numpy as np
 from copy import deepcopy
 
@@ -114,6 +115,32 @@ cdef class APF(MCMCModel):
         pass
 
     def _initialize_data(self, data):
+        if isinstance(data, skt.sptensor):
+            self._initialize_sparse_data(data)
+        else:
+            self._initialize_dense_data(data)
+
+    def _initialize_sparse_data(self, sp_data):
+        """Initialize from a sparse tensor (sktensor.sptensor).
+        
+        This method currently is incompatible with a mask.
+        """
+        self.n_missing = 0
+        self.missing_data_P = np.zeros(self.n_missing, dtype=int)
+        self.missing_subs_PM = np.zeros((0, self.n_modes), dtype=np.int32)
+        self.all_missing_MD[:] = 0
+        self.any_missing_MD[:] = 0
+        self.any_not_all_missing_MD[:] = 0
+
+        nonzero_subs = sp_data.subs
+        self.n_nonzero = nonzero_subs[0].shape[0]
+        self.nonzero_data_P = sp_data.vals
+        if self.n_nonzero > 0:
+            self.nonzero_subs_PM = np.array(nonzero_subs, dtype=np.int32, order='F').T
+        else:
+            self.nonzero_subs_PM = np.zeros((0, self.n_modes), dtype=np.int32)
+
+    def _initialize_dense_data(self, data):
         cdef:
             np.npy_intp m, d
 

@@ -6,6 +6,7 @@ from apf.models.prgpmf import PRGPMF
 import numpy as np
 import numpy.random as rn
 import scipy.stats as st
+import sktensor as skt
 
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -36,6 +37,13 @@ true_M_IJ = true_A_IK.dot(true_P_JK.T)                  # synthetic mean of obse
 true_Y_IJ = np.zeros_like(true_M_IJ, dtype=int)         # synthetic observed counts
 true_Y_IJ[true_M_IJ > 0] = rn.poisson(true_M_IJ[true_M_IJ > 0])
 
+subs = true_Y_IJ.nonzero()                    # subscripts where the ndarray has non-zero entries   
+vals = true_Y_IJ[true_Y_IJ.nonzero()]         # corresponding values of non-zero entries
+sp_data = skt.sptensor(subs,                  # create an sktensor.sptensor 
+                       vals,
+                       shape=true_Y_IJ.shape,
+                       dtype=true_Y_IJ.dtype)
+
 sns.heatmap(true_Y_IJ, cmap='Blues')
 plt.show()
 
@@ -57,7 +65,7 @@ out_dir.makedirs_p()
 verbose = thin_rate       # how often to print information to terminal
 
 # initialize and burn-in the model
-model.fit(true_Y_IJ, n_itns=n_burn_in, initialize=True, verbose=0)
+model.fit(sp_data, n_itns=n_burn_in, initialize=True, verbose=0)
 
 # run iterations after burn-in
 for _ in range(n_samples):
