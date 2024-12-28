@@ -11,7 +11,7 @@ cimport numpy as np
 from libc.math cimport sqrt
 
 from apf.base.sample cimport _sample_categorical
-
+from apf.base.allocate cimport gsl_rng, gsl_rng_alloc, gsl_rng_free, gsl_rng_set, gsl_rng_mt19937
 
 cdef extern from "gsl/gsl_randist.h" nogil:
     void gsl_ran_multinomial(gsl_rng * r,
@@ -26,8 +26,8 @@ cdef class Allocator:
 
     Useful for testing or writing pure Python programs.
     """
-    def __init__(self, object seed=None):
 
+    def __init__(self, object seed=None):
         self.rng = gsl_rng_alloc(gsl_rng_mt19937)
 
         if seed is None:
@@ -38,7 +38,6 @@ cdef class Allocator:
         """
         Free GSL random number generator.
         """
-
         gsl_rng_free(self.rng)
 
     def comp_allocate(self, y, subs, matrices, core, P_MQ=None, N_MQ=None, Y_Q=None, Y_MKD=None):

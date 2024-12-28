@@ -89,4 +89,3 @@ cdef class Allocator:
     """
     cdef:
         gsl_rng * rng
-

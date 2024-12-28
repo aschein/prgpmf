@@ -1,111 +1,82 @@
 import os
 import sys
 
+# from setuptools import setup, Extension
 from distutils.core import setup
 from distutils.extension import Extension
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 
 import numpy as np
-from path import Path
+from pathlib import Path  # Use pathlib instead of path module
 
-# if sys.platform == 'darwin':
-# 	os.environ['CC'] = 'gcc-8'
-# 	os.environ['CXX'] = 'g++-8'
+# Include and library paths for GSL
+include_gsl_dir = '/usr/include/gsl'
+lib_gsl_dir = '/usr/lib/aarch64-linux-gnu'
 
-# include_gsl_dir = '/usr/local/include/'
-# lib_gsl_dir = '/usr/local/lib/'
-
-# EXT_MODULES = [Extension(name=str(x.relpath()).replace('/', '.').split('.pyx')[0],
-# 					     sources=[str(x.relpath())],
-# 						 include_dirs=[np.get_include(),
-# 							           include_gsl_dir,
-# 							           '.'],
-# 						 library_dirs=[lib_gsl_dir],
-# 						 libraries=['gsl'],
-# 						 extra_compile_args=['-fopenmp'],
-# 						 extra_link_args=['-fopenmp'])
-# 			   for x in Path('.').walkfiles('*.pyx')]
-
-# setup(name='apf',
-# 	  version='1.0',
-# 	  description='Allocative Poisson Factorization (APF) framework and examples.',
-# 	  author='Aaron Joseph Steriade Schein',
-# 	  # packages=['base', 'models', 'tests', 'foo'],
-#   	  cmdclass={"build_ext": build_ext},
-#       ext_modules=cythonize(EXT_MODULES,
-#       					    compiler_directives={'language_level':'3'}))  # fails if set to 3
-
-# if sys.platform == 'darwin':
-#     os.environ['CC'] = '/anaconda3/bin/gcc'
-#     os.environ['CXX'] = '/anaconda3/bin/g++'
-
-include_gsl_dir = '/usr/local/include/'
-lib_gsl_dir = '/usr/local/lib/'
-
-
-def get_pkgs_and_exts(dir='.'):
+def make_extension(ext_name, ext_path=None):
     """
-    src/
-        Makefile
-        setup.py
-        __init__.py
-        base.pyx
-        first_pkg/
-            __init__.py
-            core.pyx
-            things/
-            __init__.py
-                foo.pyx
-                foo.pxd
-        second_pkg/
-            __init__.py
-            core.pyx
+    Creates a Cython Extension.
+    """
+    if ext_path is None:
+        ext_path = Path(*ext_name.split('.'))  # Fix path construction
+        ext_path = str(ext_path) + '.pyx'
+    assert Path(ext_path).is_file()
 
-    get_pkgs_and_exts()
-    >>> [...], [first_pkg, first_pkg.things, second_pkg]
+    return Extension(
+        name=ext_name,
+        sources=[str(ext_path)],  # Ensure paths are strings
+        include_dirs=[np.get_include(), include_gsl_dir],
+        library_dirs=[lib_gsl_dir],
+        libraries=['gsl', 'gslcblas'],
+        extra_compile_args=['-fopenmp', '-DNPY_NO_DEPRECATED_API=NPY_1_7_API_VERSION'],
+        extra_link_args=['-fopenmp']
+    )
 
-    Inspired by:
-    https://github.com/cython/cython/wiki/PackageHierarchy
+def get_pkgs_and_exts(dir="."):
+    """
+    Finds packages and extensions for Cython compilation.
     """
     pkgs = set()
-    exts = list()
-    for ext_path in Path(dir).walkfiles('*.pyx'):
-        ext_name = ext_path.namebase
+    exts = []
 
-        subdirs = ext_path.splitall()[1:-1]
-        if subdirs:
-            pkg = '.'.join(subdirs)
+    for ext_path in Path(dir).rglob("*.pyx"):
+        # Get the relative path and construct the module name
+        relative_path = ext_path.relative_to(Path(dir))
+        subdirs = relative_path.parts[:-1]  # Exclude the file name
+        ext_name = relative_path.stem  # Get the base name without extension
+
+        # Construct package and module names
+        pkg = ".".join(subdirs)  # Package name
+        ext_name = f"{pkg}.{ext_name}" if pkg else ext_name  # Full module name
+
+        if pkg:
             pkgs.add(pkg)
-            ext_name = pkg + '.' + ext_name
-
         exts.append(make_extension(ext_name, ext_path))
 
     return list(pkgs), exts
 
+# Collect packages and extensions
+pkgs, exts = get_pkgs_and_exts(dir=".")
 
-def make_extension(ext_name, ext_path=None):
-    if ext_path is None:
-        ext_path = Path.joinpath(*ext_name.split('.')) + '.pyx'
-    assert Path(ext_path).isfile()
+# Setup configuration
+setup(
+    name='prgpmf',
+    version='1.0.0',
+    cmdclass={"build_ext": build_ext},
+    ext_modules=cythonize(exts, language_level=3, compiler_directives={"boundscheck": False}),
+    packages=pkgs,
+    package_dir={"": "."},  # Adjust this to the correct root directory
+    install_requires=["click"],
+    entry_points={
+        "console_scripts": [
+            "prgpmf = prgpmf.cli:main",
+        ]
+    },
+    description="Poisson-randomized gamma Poisson matrix factorization.",
+    author="Aaron Schein",
+    zip_safe=False
+)
 
-    return Extension(name=ext_name,
-                     sources=[ext_path],
-                     include_dirs=[np.get_include(),
-                                   include_gsl_dir],
-                     library_dirs=[lib_gsl_dir],
-                     libraries=['gsl'],
-                     extra_compile_args=['-fopenmp'],
-                     extra_link_args=['-fopenmp'])
 
-
-pkgs, exts = get_pkgs_and_exts()
-
-
-setup(name='apf',
-      version='1.0',
-      description='Allocative Poisson Factorization (APF) framework and examples.',
-      author='Aaron Joseph Steriade Schein',
-      packages=pkgs,
-      ext_modules=cythonize(exts))
 

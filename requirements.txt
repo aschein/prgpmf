@@ -1,0 +1,12 @@
+ipython
+pandas
+parso
+path
+scikit-learn
+scikit-tensor-py3
+scipy
+cython==0.29.35
+numpy==1.21.6
+matplotlib
+seaborn
+tensorly==0.4.2

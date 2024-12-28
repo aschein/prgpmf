@@ -9,7 +9,8 @@ import seaborn as sns
 
 from apf.base.sample import Sampler
 from apf.base.sbch import mean, mode, variance, logpmf_unnorm, logpmf_norm
-from IPython import embed
+
+print('RUNNING')
 
 s = Sampler()
 def sample_sbch(m, r, size=1):
@@ -69,6 +70,5 @@ def alt_geweke_test(theta, c, size=1000, n_itns=5):
 	return forward, backward
 
 # test_sbch(m=10, r=10)
-alt_geweke_test(10, 1.)
-
-embed()
+forward, backward = alt_geweke_test(10, 1.)
+print(np.mean(forward['geom']), np.mean(backward['geom']))

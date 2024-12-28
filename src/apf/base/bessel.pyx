@@ -7,6 +7,8 @@ import sys
 import numpy as np
 cimport numpy as np
 from libc.math cimport fabs, exp, log, sqrt
+from apf.base.bessel cimport gsl_rng, gsl_rng_alloc, gsl_rng_free, gsl_rng_set, gsl_rng_mt19937
+
 
 cdef extern from "gsl/gsl_errno.h" nogil:
     ctypedef struct gsl_error_handler_t:

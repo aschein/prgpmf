@@ -20,6 +20,7 @@ from apf.base.allocate cimport _compute_prob, _allocate
 from apf.base.cyutils cimport _sum_double_vec
 from apf.base.utils import uttut, uttkrp, sp_uttkrp
 
+from numpy cimport PyArray_DIMS
 
 cdef extern from "gsl/gsl_rng.h" nogil:
     ctypedef struct gsl_rng:
@@ -67,13 +68,13 @@ cdef class APF(MCMCModel):
         self.b_M = np.ones(M)
         self.mtx_MKD = np.zeros((M, K, D))
         self.core_Q = np.ones(Q)
-        self.Y_MKD = np.zeros((M, K, D), dtype=np.int)
-        self.Y_Q = np.zeros(Q, dtype=np.int)
+        self.Y_MKD = np.zeros((M, K, D), dtype=np.int64)
+        self.Y_Q = np.zeros(Q, dtype=np.int64)
 
         # Cache and auxiliary data structures
         X = self.n_threads
-        self.Y_XQ = np.zeros((X, Q), dtype=np.int)
-        self.Y_XMKD = np.zeros((X, M, K, D), dtype=np.int)
+        self.Y_XQ = np.zeros((X, Q), dtype=np.int64)
+        self.Y_XMKD = np.zeros((X, M, K, D), dtype=np.int64)
         self.N_XMQ = np.zeros((X, M, Q), dtype=np.uint32)
         self.P_XMQ = np.zeros((X, M, Q))
         self.shp_MKD = np.zeros((M, K, D))
@@ -81,11 +82,11 @@ cdef class APF(MCMCModel):
 
         # Copy of the data 
         self.n_nonzero = 0    # placeholders
-        self.nonzero_data_P = np.zeros(0, dtype=np.int)
+        self.nonzero_data_P = np.zeros(0, dtype=np.int64)
         self.nonzero_subs_PM = np.zeros((0, M), dtype=np.int32)
 
         self.n_missing = 0
-        self.missing_data_P = np.zeros(0, dtype=np.int)
+        self.missing_data_P = np.zeros(0, dtype=np.int64)
         self.missing_subs_PM = np.zeros((0, M), dtype=np.int32)
 
         # Whether *all* data entries indexed by a given mode dimension are missing
@@ -171,7 +172,7 @@ cdef class APF(MCMCModel):
             self.any_missing_MD[:] = 0
             self.any_not_all_missing_MD[:] = 0
 
-        filled_data = data.astype(np.int).filled(fill_value=0)
+        filled_data = data.astype(np.int64).filled(fill_value=0)
         
         nonzero_subs = filled_data.nonzero()
         self.n_nonzero = nonzero_subs[0].shape[0]
@@ -387,8 +388,8 @@ cdef class APF(MCMCModel):
                           self.rngs[tid])
 
         # This is where we reduce thread-local arrays into single ones.
-        self.Y_MKD = np.sum(self.Y_XMKD, axis=0, dtype=np.int)
-        self.Y_Q = np.sum(self.Y_XQ, axis=0, dtype=np.int)
+        self.Y_MKD = np.sum(self.Y_XMKD, axis=0, dtype=np.int64)
+        self.Y_Q = np.sum(self.Y_XQ, axis=0, dtype=np.int64)
 
     cdef void _update_mtx_MKD(self, int update_mode):
         cdef: 
@@ -492,11 +493,13 @@ cdef class APF(MCMCModel):
         if (self.n_missing > 0) and (not self.impute_Y_M[mode]):
 
             all_missing_subs_D = np.where(self.all_missing_MD[mode])[0]
-            if all_missing_subs_D.shape[0] > 0:
+
+            # equivalent to all_missing_subs_D.shape[0], but better for nogil i think
+            if PyArray_DIMS(all_missing_subs_D)[0] > 0:
                 zeta_DK[all_missing_subs_D] = 0
 
             any_not_all_missing_subs_D = np.where(self.any_not_all_missing_MD[mode])[0]
-            if any_not_all_missing_subs_D.shape[0] > 0:
+            if PyArray_DIMS(any_not_all_missing_subs_D)[0] > 0:
                 if self.is_tucker:
                     mask = np.take(self.get_dense_mask(), any_not_all_missing_subs_D, axis=mode)
                     mtxs = list(self.get_matrices(transpose=True))

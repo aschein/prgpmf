@@ -1,5 +1,5 @@
 import sys
-from path import Path
+from pathlib import Path
 sys.path.append(Path(__file__).parent.parent)
 from apf.models.prgpmf import PRGPMF
 
@@ -60,7 +60,7 @@ n_burn_in = 100  # how iterations of burn-in before starting to collect
 thin_rate = 10   # how many samples to thin between collected samples
 
 out_dir = Path('samples') # directory to save collected samples to
-out_dir.makedirs_p()
+out_dir.mkdir(parents=True, exist_ok=True)
 
 verbose = thin_rate       # how often to print information to terminal
 
@@ -80,7 +80,7 @@ for _ in range(n_samples):
 all_samples = out_dir.files('state*.npz')
 
 sample_path = all_samples[0]
-itn_num = int(sample_path.namebase.split('_')[1])
+itn_num = int(sample_path.stem.split('_')[1])
 print('Inspecting posterior sample from MCMC iteration %d...' % itn_num)
 
 # samples (aka "states") are stored in numpy compressed files
