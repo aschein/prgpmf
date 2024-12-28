@@ -6,7 +6,7 @@ scikit-learn
 scikit-tensor-py3
 scipy
 cython==0.29.35
-numpy==1.21.6
+numpy==1.22.0
 matplotlib
 seaborn
 tensorly==0.4.2
