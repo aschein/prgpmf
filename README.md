@@ -48,13 +48,12 @@ SOFTWARE.
 * [scikit-learn](https://scikit-learn.org/stable/)
 * [tensorly](http://tensorly.org/stable/index.html)
 
-OSX users will have to install a version of the [GNU Compiler Collection (GCC)](https://gcc.gnu.org/). If using Anaconda,
+## Compiling and running in Docker
+All of the code is provided within a Docker container. To build the code, cd into the home directory and run:
 ```
-conda install -c anaconda gcc
+docker build -t prgpmf .
 ```
-and then change the relevant line in [setup.py](src/setup.py). OSX users may run into issues  compiling on MacOS 10.14 or greater which can be fixed by following the solutions in [this thread](https://stackoverflow.com/questions/52509602/cant-compile-c-program-on-a-mac-after-upgrade-to-mojave).
-
-OSX users will also have to install the [GNU Scientific library (GSL)](https://www.gnu.org/software/gsl/doc/html/rng.html). If using Anaconda,
+There is an example script provided on how to call the model from Python [example_prgpmf.py](src/scripts/example_prgpmf.py) which can be run from the command line within the Docker container with:
 ```
-conda install -c conda-forge gsl
+docker run --rm  prgpmf python /work/src/scripts/example_prgpmf.py
 ```
